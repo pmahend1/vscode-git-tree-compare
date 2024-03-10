@@ -30,7 +30,7 @@ export function getWorkspaceFolders(repositoryFolder: string): WorkspaceFolder[]
     return workspaceFolders;
 }
 
-export function getGitRepositoryFolders(git: GitAPI, selectedFirst=false): string[] {
+export function getGitRepositoryFolders(git: GitAPI, selectedFirst = false): string[] {
     let repos = git.repositories;
     if (selectedFirst) {
         repos = [...repos];
@@ -106,7 +106,7 @@ export async function getBranchCommit(absGitCommonDir: string, branchName: strin
     }
 }
 
-async function readPackedRefs(absGitCommonDir: string): Promise<Map<string,string>> {
+async function readPackedRefs(absGitCommonDir: string): Promise<Map<string, string>> {
     // see https://git-scm.com/docs/git-pack-refs
     const packedRefsPath = path.join(absGitCommonDir, 'packed-refs');
     const content = await fs.readFile(packedRefsPath, 'utf8');
@@ -219,9 +219,9 @@ export async function diffIndex(repo: Repository, ref: string, refreshIndex: boo
     }
 
     // exceptions can happen with newly initialized repos without commits, or when git is busy
-    
+
     const renamesFlag = findRenames ? '--find-renames' : '--no-renames';
-    let diffIndexResult = await repo.exec(['diff-index', '-z', renamesFlag, ref, '--']);
+    let diffIndexResult = await repo.exec(['diff-index', '--cached', '-z', renamesFlag, ref, '--']);
     let untrackedResult = await repo.exec(['ls-files', '-z', '--others', '--exclude-standard']);
 
     const repoRoot = normalizePath(repo.root);
@@ -230,14 +230,14 @@ export async function diffIndex(repo: Repository, ref: string, refreshIndex: boo
     const untrackedStatuses: IDiffStatus[] = untrackedResult.stdout.split('\0')
         .slice(0, -1)
         .map(line => new DiffStatus(repoRoot, 'U' as 'U', line, undefined, MODE_EMPTY, MODE_REGULAR_FILE));
-    
+
     const untrackedAbsPaths = new Set(untrackedStatuses.map(status => status.dstAbsPath))
 
     // If a file was removed (D in diff-index) but was then re-introduced and not committed yet,
     // then that file also appears as untracked (in ls-files). We need to decide which status to keep.
     // Since the untracked status is newer it gets precedence.
     const filteredDiffIndexStatuses = diffIndexStatuses.filter(status => !untrackedAbsPaths.has(status.srcAbsPath));
-        
+
     const statuses = filteredDiffIndexStatuses.concat(untrackedStatuses);
     statuses.sort((s1, s2) => s1.dstAbsPath.localeCompare(s2.dstAbsPath))
     return statuses;
